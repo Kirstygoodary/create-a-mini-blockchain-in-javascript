@@ -7,6 +7,7 @@ class Block {
     this.data = _data
     this.previousHash = _previousHash
     this.hash = this.calculateHash()
+    this.nonce = 0
   }
 
   calculateHash = () => {
@@ -14,7 +15,8 @@ class Block {
       this.index +
         this.timestamp +
         this.previousHash +
-        JSON.stringify(this.data),
+        JSON.stringify(this.data) +
+        this.nonce,
     ).toString()
     /**
      * SHA-256 hash is generated from the index, timestamp, previous block's
@@ -23,11 +25,22 @@ class Block {
      * The output is then converted in to a string
      */
   }
+
+  mineBlock = (difficulty) => {
+    while (
+      this.hash.substring(0, difficulty) !== Array(difficulty + 1).join('0') // whilst the number of zeros are not equal or lower than the target..
+    ) {
+      this.nonce++ // increase nonce by 1 as long as our hash doesn't start with enough zeros.
+      this.hash = this.calculateHash() // recalculate hash
+    }
+    console.log('Block mined: ' + this.hash) // once the puzzle is solved, the block is mined and latest hash is saved
+  }
 }
 
 class Blockchain {
   constructor() {
     this.chain = [this.createGenesisBlock()]
+    this.difficulty = 4
   }
 
   createGenesisBlock = () => {
@@ -40,7 +53,7 @@ class Blockchain {
 
   addBlock = (newBlock) => {
     newBlock.previousHash = this.getLatestBlock().hash // gets the hash from the previous block
-    newBlock.hash = newBlock.calculateHash() // every time the property changes in the block, the hash should be recalculated
+    newBlock.mineBlock(this.difficulty) // calls mineBlock with the level of difficulty, in which it recalculates the hash until puzzle solved
     this.chain.push(newBlock) // pushes the new block on to the blockchain
   }
 
@@ -72,9 +85,12 @@ class Blockchain {
 
 let kirstyCoin = new Blockchain() // creating a new blockchain
 
+console.log('Mining block one...')
 kirstyCoin.addBlock(new Block(1, '02/11/2020', { amount: 1 })) // adding blocks to the blockchain
+
+console.log('Mining block 2...')
 kirstyCoin.addBlock(new Block(2, '04/11/2020', { amount: 3 }))
 
-console.log('Is blockchain valid? ' + kirstyCoin.isChainValid())
+// console.log('Is blockchain valid? ' + kirstyCoin.isChainValid())
 
 //console.log(JSON.stringify(kirstyCoin, null, 4))
