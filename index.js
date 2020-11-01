@@ -1,10 +1,17 @@
 const SHA256 = require('crypto-js/sha256')
 
+class Transaction {
+  constructor(_fromAddress, _toAddress, _amount) {
+    this.fromAddress = _fromAddress
+    this.toAddress = _toAddress
+    this.amount = _amount
+  }
+}
+
 class Block {
-  constructor(_index, _timestamp, _data, _previousHash = '') {
-    this.index = _index
+  constructor(_timestamp, _transactions, _previousHash = '') {
     this.timestamp = _timestamp
-    this.data = _data
+    this.transactions = _transactions
     this.previousHash = _previousHash
     this.hash = this.calculateHash()
     this.nonce = 0
@@ -41,20 +48,62 @@ class Blockchain {
   constructor() {
     this.chain = [this.createGenesisBlock()]
     this.difficulty = 4
+    this.pendingTransactions = [] // new block every 10 mins, therefore pending transactions during that time are stored here
+    this.miningReward = 100 // no of coins every time a new block is mined
   }
 
   createGenesisBlock = () => {
-    return new Block(0, '01/11/2020', 'Genesis Block', '0')
+    return new Block('01/11/2020', 'Genesis Block', '0')
   }
 
   getLatestBlock = () => {
     return this.chain[this.chain.length - 1]
   }
 
-  addBlock = (newBlock) => {
-    newBlock.previousHash = this.getLatestBlock().hash // gets the hash from the previous block
-    newBlock.mineBlock(this.difficulty) // calls mineBlock with the level of difficulty, in which it recalculates the hash until puzzle solved
-    this.chain.push(newBlock) // pushes the new block on to the blockchain
+  minePendingTransactions = (miningRewardAddress) => {
+    let block = new Block(Date.now(), this.pendingTransactions) // create a new block with pending transactions
+    block.mineBlock(this.difficulty) // mine the block
+    console.log('Block successfully mined')
+    this.chain.push(block) // add the successfully mined block to the blockchain
+
+    this.pendingTransactions = [
+      new Transaction(null, miningRewardAddress, this.miningReward), // clears the pending transactions and adds the reward as a pending transaction
+    ]
+  }
+
+  createTransaction = (transaction) => {
+    // in the parenthesis .. adding 'new Transaction('...', '...', '...')'
+    this.pendingTransactions.push(transaction) // adds new transactions to the pending transactions
+  }
+
+  getBalanceOfAddress = (address) => {
+    /**
+     * In bitcoin, you don't have a balance.
+     *
+     * The transactions are just stored on the blockchain.
+     *
+     * If you ask for your balance, you have to go through all your
+     * transactions in the blockchain and add / deduct it from 0 to
+     * get the balance.
+     */
+
+    let balance = 0
+
+    for (const block of this.chain) {
+      // looping over each block in the chain
+      for (const transaction of block.transactions) {
+        // looping over each transaction in the chain
+        if (transaction.fromAddress === address) {
+          // if address is a fromAddress, reduce balance
+          balance -= transaction.amount
+        }
+        if (transaction.toAddress === address) {
+          // if address is toAddress, add to balance
+          balance += transaction.amount
+        }
+      }
+    }
+    return balance
   }
 
   /** @function
@@ -85,12 +134,31 @@ class Blockchain {
 
 let kirstyCoin = new Blockchain() // creating a new blockchain
 
-console.log('Mining block one...')
-kirstyCoin.addBlock(new Block(1, '02/11/2020', { amount: 1 })) // adding blocks to the blockchain
+// console.log('Mining block one...')
+// kirstyCoin.addBlock(new Block(1, '02/11/2020', { amount: 1 })) // adding blocks to the blockchain
 
-console.log('Mining block 2...')
-kirstyCoin.addBlock(new Block(2, '04/11/2020', { amount: 3 }))
+// console.log('Mining block 2...')
+// kirstyCoin.addBlock(new Block(2, '04/11/2020', { amount: 3 }))
 
 // console.log('Is blockchain valid? ' + kirstyCoin.isChainValid())
 
 //console.log(JSON.stringify(kirstyCoin, null, 4))
+
+kirstyCoin.createTransaction(new Transaction('address1', 'address2', 100))
+kirstyCoin.createTransaction(new Transaction('address2', 'address1', 50))
+
+console.log('Starting the miner...')
+kirstyCoin.minePendingTransactions('0x123456789')
+
+console.log(
+  'Balance of Kirstys address is ' +
+    kirstyCoin.getBalanceOfAddress('0x123456789'),
+)
+
+console.log('Starting the miner again...')
+kirstyCoin.minePendingTransactions('0x123456789')
+
+console.log(
+  'Balance of Kirstys address is ' +
+    kirstyCoin.getBalanceOfAddress('0x123456789'),
+)
