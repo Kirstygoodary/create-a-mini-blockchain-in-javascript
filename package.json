@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/Kirstygoodary/create-a-mini-blockchain-in-javascript#readme",
   "dependencies": {
+    "crypto-js": "^4.0.0",
     "elliptic": "^6.5.3"
   }
 }
